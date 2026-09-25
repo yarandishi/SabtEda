@@ -1,0 +1,50 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Referrer partner (e.g. ?ref=K1024).
+// Supports the future pipeline: Referrer → Visit → Lead → Contact → Service → Completed → Commission
+model Referrer {
+  id          String   @id @default(cuid())
+  code        String   @unique // e.g. K1024
+  displayName String?
+  contact     String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// A user-submitted help request.
+model Lead {
+  id           String   @id @default(cuid())
+  fullName     String
+  mobile       String
+  city         String
+  // "claim" | "question" | "assistance"
+  requestType  String
+  // Optional free-text note from the user
+  note         String?
+  // Hidden referral code captured from ?ref=K1024.
+  // Stored as a plain indexed string (no hard FK) so lead creation never
+  // fails for unregistered/legacy codes. Reconciliation with Referrer.code
+  // for the commission pipeline is done at query time.
+  referralCode String?
+  // Pipeline status: new -> contacted -> service -> completed | cancelled
+  status       String   @default("new")
+  userAgent    String?
+  source       String?  // e.g. "web", "direct"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([referralCode])
+  @@index([status])
+  @@index([mobile])
+}
