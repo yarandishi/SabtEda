@@ -114,3 +114,27 @@ Stage Summary:
 - Credentials: admin → admin/admin12345 (CHANGE in production); demo referrer → K1024/referrer123.
 - New files: src/lib/auth.ts, src/lib/data.ts, src/lib/tracking.ts (existing), src/app/admin/page.tsx, src/app/referrer/page.tsx, src/app/articles/[slug]/page.tsx, src/app/sitemap.ts, src/app/robots.ts, src/components/admin/* (login, dashboard, 4 tabs), src/components/referrer/* (auth, dashboard), src/components/katebkar/{home-client,articles-section,article-header,article-content,markdown}.ts, .env.example, DEPLOYMENT.md.
 - Production-ready for self-hosted Node hosting (VPS/Node host); SQLite file-based DB; see DEPLOYMENT.md for full guide.
+
+---
+Task ID: 4
+Agent: main (Z.ai Code)
+Task: Fix the referrer UX gap — registration generates a code automatically but the user never sees it, so they can't log back in later (the login form requires the code).
+
+Work Log:
+- Diagnosed the issue: /api/referrer/register generates a unique code (e.g. KYRVK) and the old client just called onLoggedIn() immediately, sending the user to the dashboard without ever showing the code. On next visit, the login form asks for a code the user never knew.
+- Created POST /api/referrer/recover-code: given a registered mobile number, returns the referrer code + displayName (code is semi-public — it appears in referral links anyway). Validates mobile format and account existence/active state with clear Persian errors.
+- Rewrote src/components/referrer/referrer-auth.tsx:
+  (1) RegisterForm now shows a dedicated SUCCESS SCREEN after registration: large auto-generated code in a highlighted card (font-display, tracking-wider), a copy-code button, an amber warning "این کد را در جای امنی یادداشت کنید...", and a "ورود به پنل" button to proceed to the dashboard. The form no longer auto-redirects.
+  (2) LoginForm now has a "کد معرف را نمی‌دانم / فراموش کرده‌ام" link below the form that opens a RecoverCodeForm: enter mobile → fetches /api/referrer/recover-code → shows recovered code prominently with copy button → "بازگشت به ورود" pre-fills the recovered code into the login form's code field so the user only needs to type their password.
+- Cleaned up unused onRegistered prop from RegisterForm signature.
+
+Verification (Agent Browser end-to-end):
+- Registered new referrer "رضا نوری" with mobile 09127776655 / password test1234 → success screen shows code KCUQN prominently with copy button + amber warning + "ورود به پنل" button (VLM-confirmed).
+- Logged out → clicked "کد معرف را نمی‌دانم / فراموش کرده‌ام" → entered 09127776655 → recovered code KCUQN displayed with copy button.
+- Clicked "بازگشت به ورود" → login form pre-filled with KCUQN → typed password → submitted → successfully logged into dashboard.
+- Lint clean.
+
+Stage Summary:
+- The registration→login UX gap is fully resolved.
+- Two complementary recovery paths: (1) immediate success screen right after registration (primary), (2) mobile-based code recovery for returning users who forgot (secondary).
+- New files: src/app/api/referrer/recover-code/route.ts. Modified: src/components/referrer/referrer-auth.tsx.
