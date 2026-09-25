@@ -2,6 +2,11 @@
 
 import { Logo } from "./logo";
 
+interface SiteFooterProps {
+  onTrackClick: () => void;
+  onReferrerClick: () => void;
+}
+
 const FOOTER_LINKS = [
   {
     title: "مسیرها",
@@ -28,7 +33,7 @@ const FOOTER_LINKS = [
   },
 ];
 
-export function SiteFooter() {
+export function SiteFooter({ onTrackClick, onReferrerClick }: SiteFooterProps) {
   return (
     <footer className="mt-auto border-t border-border bg-navy-dark text-white">
       <div className="mx-auto w-full max-w-[1040px] px-4 py-12 sm:px-6">
@@ -88,9 +93,25 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-center sm:flex-row sm:text-right">
-          <p className="text-xs text-white/55">
-            © {new Date().getFullYear()} کاتب‌کار — تمامی حقوق محفوظ است.
-          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-start">
+            <button
+              type="button"
+              onClick={onTrackClick}
+              className="text-xs text-white/65 transition-colors hover:text-white"
+            >
+              پیگیری درخواست
+            </button>
+            <button
+              type="button"
+              onClick={onReferrerClick}
+              className="text-xs text-white/65 transition-colors hover:text-white"
+            >
+              ورود به پنل معرف
+            </button>
+            <p className="text-xs text-white/55">
+              © {new Date().getFullYear()} کاتب‌کار — تمامی حقوق محفوظ است.
+            </p>
+          </div>
           <p className="text-xs text-white/55">
             ساخته‌شده برای راهنمایی کاربران سامانه کاتب
           </p>

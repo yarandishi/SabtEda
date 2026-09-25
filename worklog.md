@@ -40,3 +40,44 @@ Stage Summary:
 - Key artifacts: src/app/page.tsx, src/app/layout.tsx, src/app/globals.css, src/app/api/leads/route.ts, prisma/schema.prisma, src/components/katebkar/*.tsx, src/hooks/use-referral.ts.
 - Lint clean, dev server stable, DB schema pushed.
 - Referral pipeline structure ready for future: Referrer → Visit → Lead → Contact → Service → Completed → Commission.
+
+---
+Task ID: 2
+Agent: main (Z.ai Code)
+Task: Enhance KatebKar V3 with (1) more beautiful fonts, (2) request tracking system with tracking code + tracking dialog, (3) referrer panel login + dashboard.
+
+Work Log:
+- Fonts: Added El Messiri (display/headings) via next/font/google alongside Vazirmatn (body). Updated globals.css to apply El Messiri to h1/h2/h3/.font-display via @layer base, and registered --font-display in @theme inline.
+- Prisma schema: Added `trackingCode String @unique` to Lead model. Reset DB (test data only) and re-pushed schema. Regenerated Prisma client.
+- Seeded demo data via prisma/seed.ts: referrer K1024 ("معرف نمونه") + 3 sample leads (KK-DEMO01/02/03) with varied statuses (contacted/new/completed) so the referrer dashboard has content.
+- Backend API:
+  - src/lib/tracking.ts: generateTrackingCode() creates "KK-XXXXXX" using unambiguous alphabet (no 0/O/1/I), retries on collision; normalizeTrackingCode() for input validation.
+  - Updated POST /api/leads to generate + return trackingCode in response.
+  - Created GET /api/leads/track?code=... → returns lead summary + ordered timeline (new→contacted→service→completed, or cancelled branch) with done/current flags.
+  - Created POST /api/referrer/login (validates code exists & active, returns referrer profile).
+  - Created GET /api/referrer/leads?code=... → returns referrer profile, aggregate stats (total/new/contacted/service/completed/cancelled), and masked leads list.
+- Frontend components:
+  - lead-form.tsx: success state now prominently shows tracking code (font-display, copy-to-clipboard button), with "پیگیری وضعیت درخواست" button that opens tracking dialog pre-filled.
+  - tracking-dialog.tsx: shadcn Dialog with code input → calls /api/leads/track → renders lead summary card + vertical timeline with stage icons (done=green check, current=amber dot, pending=grey circle, cancelled=red X).
+  - referrer-panel.tsx: shadcn Dialog with login form (code input) → dashboard showing referrer code, 3 stat cards (total/contacted/completed), scrollable leads list with status badges + dates, invite link, logout. Persists session in sessionStorage for auto-login.
+  - site-header.tsx: added "پیگیری درخواست" (search icon) and "پنل معرف" (user-cog icon) buttons — icon-only on mobile, icon+text on desktop.
+  - site-footer.tsx: added پیگیری/پنل معرف text links in footer bottom bar.
+  - page.tsx: wired both dialogs with open state + initialCode passthrough for tracking.
+- Hit a caching issue: after DB reset + schema change, dev server kept running stale Prisma client (reported `trackingCode` as unknown arg + still referenced removed `referrer` relation). Fixed by killing dev server, clearing .next cache, and restarting — confirmed client now recognizes trackingCode.
+
+Verification (Agent Browser end-to-end):
+- Font upgrade: h1 computed font-family = "El Messiri" (confirmed via getComputedStyle). VLM verified headings look "significantly more elegant and distinctive" while body stays clean.
+- Tracking flow: submitted a lead → success state shows code "KK-5VGXWR" → clicked پیگیری → dialog opens pre-filled → بررسی shows timeline with all 4 stages + current stage highlighted. VLM confirmed clean layout.
+- Tracking validation: invalid code "KK-WRONG1" → shows "کد رهگیری معتبر نیست. مثال: KK-7A3F9X".
+- Referrer flow: opened پنل معرف → entered K1024 → dashboard shows code K1024, stats (4 total, 1 contacted, 1 completed), and 4 leads including the just-submitted "سارا محمدی". VLM confirmed stat cards, lead list, and invite link all render correctly.
+- Referrer validation: invalid code "BADCODE" → shows "کد معرف پیدا نشد." Auto-login from sessionStorage works on reopen.
+- Header (desktop + mobile): both new buttons present; mobile shows icon-only buttons without crowding.
+- Footer: پیگیری + پنل معرف links present in bottom bar.
+- Sticky mobile CTA: still toggles correctly (visible at top, hides when form visible).
+- Lint clean, dev server stable.
+
+Stage Summary:
+- All 3 enhancements complete and browser-verified.
+- New files: src/lib/tracking.ts, src/app/api/leads/track/route.ts, src/app/api/referrer/login/route.ts, src/app/api/referrer/leads/route.ts, src/components/katebkar/tracking-dialog.tsx, src/components/katebkar/referrer-panel.tsx, prisma/seed.ts.
+- Tracking code format: KK-XXXXXX (6 unambiguous chars). Stages: new → contacted → service → completed (with cancelled as a side branch).
+- Referrer auth: simple code-based login (sessionStorage persistence). Dashboard shows masked leads + stats + invite link for the full future commission pipeline.

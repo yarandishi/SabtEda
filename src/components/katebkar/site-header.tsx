@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Logo } from "./logo";
+import { Search, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+interface SiteHeaderProps {
+  onTrackClick: () => void;
+  onReferrerClick: () => void;
+}
 
 const NAV_LINKS = [
   { href: "#paths", label: "مسیرها" },
@@ -11,7 +17,7 @@ const NAV_LINKS = [
   { href: "#about", label: "درباره ما" },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({ onTrackClick, onReferrerClick }: SiteHeaderProps) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -30,12 +36,12 @@ export function SiteHeader() {
           : "border-transparent bg-background"
       )}
     >
-      <div className="mx-auto flex h-16 w-full max-w-[1040px] items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-16 w-full max-w-[1040px] items-center justify-between gap-2 px-4 sm:px-6">
         <a href="#top" className="shrink-0" aria-label="کاتب‌کار — خانه">
           <Logo />
         </a>
 
-        <nav className="hidden items-center gap-1 md:flex" aria-label="ناوبری اصلی">
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="ناوبری اصلی">
           {NAV_LINKS.map((l) => (
             <a
               key={l.href}
@@ -47,12 +53,36 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        <a
-          href="#lead-form"
-          className="hidden rounded-xl bg-navy px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-navy-dark hover:shadow md:inline-flex"
-        >
-          ثبت درخواست
-        </a>
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Tracking button — icon on mobile, text on desktop */}
+          <button
+            type="button"
+            onClick={onTrackClick}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-border bg-card px-3 text-sm font-medium text-navy transition-colors hover:bg-mist sm:h-10 sm:px-4"
+            aria-label="پیگیری درخواست"
+          >
+            <Search className="h-4 w-4" strokeWidth={1.8} />
+            <span className="hidden sm:inline">پیگیری درخواست</span>
+          </button>
+
+          {/* Referrer panel button — icon on mobile, text on desktop */}
+          <button
+            type="button"
+            onClick={onReferrerClick}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-forest/30 bg-forest-soft px-3 text-sm font-medium text-forest transition-colors hover:bg-forest/15 sm:h-10 sm:px-4"
+            aria-label="ورود به پنل معرف"
+          >
+            <UserCog className="h-4 w-4" strokeWidth={1.8} />
+            <span className="hidden sm:inline">پنل معرف</span>
+          </button>
+
+          <a
+            href="#lead-form"
+            className="hidden rounded-xl bg-navy px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-navy-dark hover:shadow md:inline-flex"
+          >
+            ثبت درخواست
+          </a>
+        </div>
       </div>
     </header>
   );

@@ -25,6 +25,8 @@ model Referrer {
 // A user-submitted help request.
 model Lead {
   id           String   @id @default(cuid())
+  // Human-friendly tracking code shown to the user, e.g. KK-7A3F9X
+  trackingCode String   @unique
   fullName     String
   mobile       String
   city         String

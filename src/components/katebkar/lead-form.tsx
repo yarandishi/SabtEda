@@ -8,6 +8,9 @@ import {
   User,
   MapPin,
   Send,
+  Copy,
+  Check,
+  Search,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +21,7 @@ import { cn } from "@/lib/utils";
 interface LeadFormProps {
   preselectType: RequestType | null;
   referralCode: string | null;
+  onTrackRequest?: (code?: string) => void;
 }
 
 interface FieldErrors {
@@ -37,7 +41,7 @@ function normalizeMobile(raw: string): string {
   return m;
 }
 
-export function LeadForm({ preselectType, referralCode }: LeadFormProps) {
+export function LeadForm({ preselectType, referralCode, onTrackRequest }: LeadFormProps) {
   const { toast } = useToast();
   const [fullName, setFullName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -46,6 +50,8 @@ export function LeadForm({ preselectType, referralCode }: LeadFormProps) {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [trackingCode, setTrackingCode] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const firstErrorRef = useRef<HTMLInputElement | null>(null);
 
   // Sync preselect from path cards
@@ -75,11 +81,22 @@ export function LeadForm({ preselectType, referralCode }: LeadFormProps) {
     return Object.keys(next).length === 0;
   }
 
+  async function copyCode() {
+    if (!trackingCode) return;
+    try {
+      await navigator.clipboard.writeText(trackingCode);
+      setCopied(true);
+      toast({ title: "کپی شد", description: "کد رهگیری کپی شد." });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "کپی ناموفق", description: "کد را دستی یادداشت کنید." });
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (submitting) return;
     if (!validate()) {
-      // focus first error
       const firstKey = Object.keys(errors)[0];
       if (firstKey) {
         const el = document.getElementById(`field-${firstKey}`);
@@ -105,11 +122,11 @@ export function LeadForm({ preselectType, referralCode }: LeadFormProps) {
       if (!res.ok || !data.ok) {
         throw new Error(data?.error || "ثبت درخواست ناموفق بود.");
       }
+      setTrackingCode(data.trackingCode ?? null);
       setDone(true);
       toast({
         title: "درخواست ثبت شد",
-        description:
-          "به‌زودی برای راهنمایی با شما تماس می‌گیریم.",
+        description: "کد رهگیری برای پیگیری نمایش داده شد.",
       });
     } catch (err) {
       toast({
@@ -127,27 +144,64 @@ export function LeadForm({ preselectType, referralCode }: LeadFormProps) {
     return (
       <section id="lead-form" className="scroll-mt-16 py-14 sm:py-16 lg:py-20">
         <div className="mx-auto w-full max-w-[1040px] px-4 sm:px-6">
-          <div className="mx-auto max-w-xl rounded-3xl border border-forest/20 bg-forest-soft p-8 text-center shadow-sm sm:p-10">
-            <span className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-full bg-forest/10 text-forest">
-              <CheckCircle2 className="h-8 w-8" strokeWidth={1.8} />
+          <div className="mx-auto max-w-xl rounded-3xl border border-forest/20 bg-forest-soft p-6 text-center shadow-sm sm:p-8">
+            <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-forest/10 text-forest">
+              <CheckCircle2 className="h-7 w-7" strokeWidth={1.8} />
             </span>
-            <h3 className="mt-5 text-xl font-bold text-navy">
+            <h3 className="mt-4 text-xl font-bold text-navy">
               درخواست شما ثبت شد
             </h3>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">
               اطلاعات اولیه شما دریافت شد. تیم راهنمایی کاتب‌کار به‌زودی برای
               بررسی وضعیت و راهنمایی با شما تماس می‌گیرد.
             </p>
-            <p className="mt-4 text-xs text-muted-foreground">
-              در صورت نیاز، می‌توانید سؤالات خود را در بخش سؤالات متداول مرور
-              کنید.
-            </p>
-            <a
-              href="#faq"
-              className="mt-6 inline-flex items-center justify-center rounded-xl border border-border bg-card px-5 py-2.5 text-sm font-semibold text-navy transition-colors hover:bg-mist"
-            >
-              مرور سؤالات متداول
-            </a>
+
+            {/* Tracking code display */}
+            {trackingCode && (
+              <div className="mt-5 rounded-2xl border border-forest/25 bg-card p-4">
+                <p className="text-xs font-medium text-muted-foreground">
+                  کد رهگیری شما
+                </p>
+                <div className="mt-1.5 flex items-center justify-center gap-2">
+                  <span className="kk-num font-display text-2xl font-bold tracking-wider text-navy">
+                    {trackingCode}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={copyCode}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-mist hover:text-navy"
+                    aria-label="کپی کد رهگیری"
+                  >
+                    {copied ? (
+                      <Check className="h-4 w-4 text-forest" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                <p className="mt-2 text-[12px] leading-6 text-muted-foreground">
+                  این کد را یادداشت کنید. بعد از تماس تیم راهنمایی نیز همین کد
+                  برایتان ارسال می‌شود تا وضعیت درخواست را رصد کنید.
+                </p>
+              </div>
+            )}
+
+            <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
+              <button
+                type="button"
+                onClick={() => onTrackRequest?.(trackingCode ?? undefined)}
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-navy px-5 py-3 text-sm font-semibold text-white transition-all hover:bg-navy-dark"
+              >
+                <Search className="h-4 w-4" />
+                پیگیری وضعیت درخواست
+              </button>
+              <a
+                href="#faq"
+                className="inline-flex items-center justify-center rounded-xl border border-border bg-card px-5 py-3 text-sm font-semibold text-navy transition-colors hover:bg-mist"
+              >
+                مرور سؤالات متداول
+              </a>
+            </div>
           </div>
         </div>
       </section>

@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
-import { Vazirmatn } from "next/font/google";
+import { Vazirmatn, El_Messiri } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
 const vazirmatn = Vazirmatn({
   variable: "--font-vazirmatn",
   subsets: ["arabic", "latin"],
+  display: "swap",
+});
+
+const elMessiri = El_Messiri({
+  variable: "--font-el-messiri",
+  subsets: ["arabic", "latin"],
+  weight: ["500", "600", "700"],
   display: "swap",
 });
 
@@ -42,7 +49,7 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl" suppressHydrationWarning>
       <body
-        className={`${vazirmatn.variable} antialiased bg-background text-foreground`}
+        className={`${vazirmatn.variable} ${elMessiri.variable} font-sans antialiased bg-background text-foreground`}
       >
         {children}
         <Toaster />

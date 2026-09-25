@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { generateTrackingCode } from "@/lib/tracking";
 
 // Validates an Iranian mobile number (09xxxxxxxxx or +989xxxxxxxxx)
 function normalizeMobile(raw: string): string | null {
@@ -60,10 +61,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userAgent = req.headers.get("user-storage") || req.headers.get("user-agent") || null;
+    const userAgent =
+      req.headers.get("user-storage") || req.headers.get("user-agent") || null;
+    const trackingCode = await generateTrackingCode();
 
     const lead = await db.lead.create({
       data: {
+        trackingCode,
         fullName,
         mobile,
         city,
@@ -78,6 +82,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       id: lead.id,
+      trackingCode: lead.trackingCode,
       message: "درخواست شما ثبت شد. به‌زودی برای راهنمایی با شما تماس می‌گیریم.",
     });
   } catch (err) {
