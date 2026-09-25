@@ -1,42 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { createSession, verifyPassword } from "@/lib/auth";
 
-/**
- * Simple referrer "login" by code.
- * Returns referrer profile if the code exists and is active.
- * (No real auth — for demo purposes the code itself is the credential.)
- */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => null);
-    if (!body || typeof body !== "object") {
-      return NextResponse.json(
-        { ok: false, error: "درخواست نامعتبر است." },
-        { status: 400 }
-      );
+    if (!body) {
+      return NextResponse.json({ ok: false, error: "درخواست نامعتبر است." }, { status: 400 });
     }
-    const code = String(body.code ?? "")
-      .trim()
-      .toUpperCase()
-      .slice(0, 32);
+    const code = String(body.code ?? "").trim().toUpperCase();
+    const password = String(body.password ?? "");
 
-    if (!code) {
+    if (!code || !password) {
       return NextResponse.json(
-        { ok: false, error: "کد معرف را وارد کنید." },
+        { ok: false, error: "کد معرف و رمز عبور را وارد کنید." },
         { status: 422 }
       );
     }
 
-    const referrer = await db.referrer.findUnique({
-      where: { code },
-      select: {
-        code: true,
-        displayName: true,
-        active: true,
-        createdAt: true,
-      },
-    });
-
+    const referrer = await db.referrer.findUnique({ where: { code } });
     if (!referrer) {
       return NextResponse.json(
         { ok: false, error: "کد معرف پیدا نشد." },
@@ -49,13 +31,32 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
+    // Legacy admin-created referrers without password: ask to register first
+    if (!referrer.passwordHash) {
+      return NextResponse.json(
+        { ok: false, error: "برای این کد هنوز رمز عبوری تعریف نشده است. ابتدا ثبت‌نام کنید." },
+        { status: 403 }
+      );
+    }
+    const ok = await verifyPassword(password, referrer.passwordHash);
+    if (!ok) {
+      return NextResponse.json(
+        { ok: false, error: "کد معرف یا رمز عبور نادرست است." },
+        { status: 401 }
+      );
+    }
+
+    await createSession({
+      kind: "referrer",
+      id: referrer.id,
+      code: referrer.code,
+    });
 
     return NextResponse.json({
       ok: true,
       referrer: {
         code: referrer.code,
         displayName: referrer.displayName,
-        memberSince: referrer.createdAt,
       },
     });
   } catch (err) {

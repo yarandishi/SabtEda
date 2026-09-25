@@ -1,3 +1,18 @@
+export interface FaqItem {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+export interface ArticleSummary {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  coverUrl: string | null;
+  publishedAt: string | null;
+}
+
 export type RequestType = "claim" | "question" | "assistance";
 
 export interface RequestTypeMeta {

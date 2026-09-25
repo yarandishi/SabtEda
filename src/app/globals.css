@@ -204,3 +204,37 @@
   unicode-bidi: embed;
   display: inline-block;
 }
+
+/* ===== Article Markdown styles ===== */
+.kk-md-p {
+  margin: 0 0 1rem;
+  line-height: 2;
+  font-size: 0.975rem;
+  color: oklch(0.33 0.02 255);
+}
+.kk-md-h1,
+.kk-md-h2,
+.kk-md-h3,
+.kk-md-h4 {
+  font-family: var(--font-el-messiri), var(--font-vazirmatn), ui-serif, Georgia, serif;
+  color: var(--navy);
+  font-weight: 700;
+  line-height: 1.5;
+  margin: 1.75rem 0 0.75rem;
+  letter-spacing: -0.01em;
+}
+.kk-md-h1 { font-size: 1.75rem; }
+.kk-md-h2 { font-size: 1.35rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+.kk-md-h3 { font-size: 1.15rem; }
+.kk-md-h4 { font-size: 1rem; }
+.kk-md-ul {
+  margin: 0 0 1rem;
+  padding-right: 1.25rem;
+  list-style: disc;
+  line-height: 2;
+}
+.kk-md-ul li {
+  margin-bottom: 0.4rem;
+  font-size: 0.975rem;
+  color: oklch(0.33 0.02 255);
+}

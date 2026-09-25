@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Logo } from "./logo";
 import { Search, UserCog } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SiteHeaderProps {
   onTrackClick: () => void;
-  onReferrerClick: () => void;
 }
 
 const NAV_LINKS = [
@@ -17,7 +17,7 @@ const NAV_LINKS = [
   { href: "#about", label: "درباره ما" },
 ];
 
-export function SiteHeader({ onTrackClick, onReferrerClick }: SiteHeaderProps) {
+export function SiteHeader({ onTrackClick }: SiteHeaderProps) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -65,16 +65,15 @@ export function SiteHeader({ onTrackClick, onReferrerClick }: SiteHeaderProps) {
             <span className="hidden sm:inline">پیگیری درخواست</span>
           </button>
 
-          {/* Referrer panel button — icon on mobile, text on desktop */}
-          <button
-            type="button"
-            onClick={onReferrerClick}
+          {/* Referrer panel — link to /referrer */}
+          <Link
+            href="/referrer"
             className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-forest/30 bg-forest-soft px-3 text-sm font-medium text-forest transition-colors hover:bg-forest/15 sm:h-10 sm:px-4"
             aria-label="ورود به پنل معرف"
           >
             <UserCog className="h-4 w-4" strokeWidth={1.8} />
             <span className="hidden sm:inline">پنل معرف</span>
-          </button>
+          </Link>
 
           <a
             href="#lead-form"

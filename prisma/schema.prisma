@@ -10,43 +10,84 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Referrer partner (e.g. ?ref=K1024).
-// Supports the future pipeline: Referrer → Visit → Lead → Contact → Service → Completed → Commission
-model Referrer {
-  id          String   @id @default(cuid())
-  code        String   @unique // e.g. K1024
-  displayName String?
-  contact     String?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// ===== Admin users (staff who manage the platform) =====
+model AdminUser {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  displayName  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
-// A user-submitted help request.
+// ===== Referrer partners =====
+// Referrers can self-register (passwordHash set) or be created by admin.
+// Pipeline: Referrer → Visit → Lead → Contact → Service → Completed → Commission
+model Referrer {
+  id           String   @id @default(cuid())
+  code         String   @unique // e.g. K1024
+  displayName  String?
+  contact      String?  // mobile
+  email        String?
+  passwordHash String?  // set when self-registered; null for admin-created (legacy)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// ===== User-submitted help requests =====
 model Lead {
   id           String   @id @default(cuid())
-  // Human-friendly tracking code shown to the user, e.g. KK-7A3F9X
-  trackingCode String   @unique
+  trackingCode String   @unique // e.g. KK-7A3F9X
   fullName     String
   mobile       String
   city         String
   // "claim" | "question" | "assistance"
   requestType  String
-  // Optional free-text note from the user
   note         String?
-  // Hidden referral code captured from ?ref=K1024.
-  // Stored as a plain indexed string (no hard FK) so lead creation never
-  // fails for unregistered/legacy codes. Reconciliation with Referrer.code
-  // for the commission pipeline is done at query time.
+  // Hidden referral code captured from ?ref=K1024
   referralCode String?
   // Pipeline status: new -> contacted -> service -> completed | cancelled
   status       String   @default("new")
+  // Optional internal admin note (not shown to user)
+  adminNote    String?
   userAgent    String?
-  source       String?  // e.g. "web", "direct"
+  source       String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([referralCode])
   @@index([status])
   @@index([mobile])
+}
+
+// ===== Articles (SEO content managed by admin) =====
+model Article {
+  id              String    @id @default(cuid())
+  slug            String    @unique
+  title           String
+  excerpt         String?
+  content         String    // markdown
+  coverUrl        String?
+  metaDescription String?
+  keywords        String?   // comma-separated
+  published       Boolean   @default(false)
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([published, publishedAt])
+}
+
+// ===== FAQs (managed by admin, shown on public site) =====
+model Faq {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  order     Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, order])
 }

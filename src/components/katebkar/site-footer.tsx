@@ -1,10 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { Logo } from "./logo";
 
 interface SiteFooterProps {
   onTrackClick: () => void;
-  onReferrerClick: () => void;
 }
 
 const FOOTER_LINKS = [
@@ -33,7 +33,7 @@ const FOOTER_LINKS = [
   },
 ];
 
-export function SiteFooter({ onTrackClick, onReferrerClick }: SiteFooterProps) {
+export function SiteFooter({ onTrackClick }: SiteFooterProps) {
   return (
     <footer className="mt-auto border-t border-border bg-navy-dark text-white">
       <div className="mx-auto w-full max-w-[1040px] px-4 py-12 sm:px-6">
@@ -101,13 +101,12 @@ export function SiteFooter({ onTrackClick, onReferrerClick }: SiteFooterProps) {
             >
               پیگیری درخواست
             </button>
-            <button
-              type="button"
-              onClick={onReferrerClick}
+            <Link
+              href="/referrer"
               className="text-xs text-white/65 transition-colors hover:text-white"
             >
               ورود به پنل معرف
-            </button>
+            </Link>
             <p className="text-xs text-white/55">
               © {new Date().getFullYear()} کاتب‌کار — تمامی حقوق محفوظ است.
             </p>

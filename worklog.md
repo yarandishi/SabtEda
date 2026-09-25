@@ -81,3 +81,36 @@ Stage Summary:
 - New files: src/lib/tracking.ts, src/app/api/leads/track/route.ts, src/app/api/referrer/login/route.ts, src/app/api/referrer/leads/route.ts, src/components/katebkar/tracking-dialog.tsx, src/components/katebkar/referrer-panel.tsx, prisma/seed.ts.
 - Tracking code format: KK-XXXXXX (6 unambiguous chars). Stages: new → contacted → service → completed (with cancelled as a side branch).
 - Referrer auth: simple code-based login (sessionStorage persistence). Dashboard shows masked leads + stats + invite link for the full future commission pipeline.
+
+---
+Task ID: 3
+Agent: main (Z.ai Code)
+Task: Build a fully working admin panel (manage articles, FAQs, leads with statuses/tracking, referrers with counts), referrer self-registration + login + dashboard, excellent SEO, and easy hosting deployment.
+
+Work Log:
+- Database: installed bcryptjs. Extended Prisma schema with AdminUser, Article, Faq models; added passwordHash to Referrer; added adminNote to Lead. Force-reset DB and re-pushed. Regenerated client.
+- Seed (prisma/seed.ts): creates default admin (admin/admin12345), demo referrer K1024 (password referrer123) + 3 sample leads, 6 default FAQs, 1 sample published article.
+- Auth foundation (src/lib/auth.ts): bcrypt password hashing, HMAC-signed session token in httpOnly cookie (7-day expiry), timing-safe verification, createSession/destroySession/getSession helpers, requireAdmin/requireReferrer guards, generateUniqueReferrerCode (K + 4 unambiguous chars).
+- Auth APIs: /api/admin/login|logout|me, /api/referrer/register|login|logout|me. Referrer login now requires password (legacy admin-created referrers without password must self-register).
+- Admin APIs (all guarded by requireAdmin): GET /api/admin/leads (with stats + search + status filter), PATCH /api/admin/leads/[id]/status (status + adminNote), GET+POST /api/admin/referrers (list with lead counts, create), GET /api/admin/articles + POST, GET/PATCH/DELETE /api/admin/articles/[id], GET+POST /api/admin/faqs, PATCH/DELETE /api/admin/faqs/[id].
+- Referrer leads API rewritten: was query-param-based (422 error), now uses session cookie for security.
+- Admin panel (/admin route): login page + dashboard with 4 tabs. LeadsTab: stats cards, search/filter, table (desktop) + cards (mobile), inline status dropdown, admin note editor. ReferrersTab: list with lead counts + create form. ArticlesTab: list + full editor (title, slug, excerpt, metaDescription with char counter, keywords, coverUrl, markdown content, publish checkbox). FaqsTab: list + editor (question, answer, order, publish).
+- Referrer panel (/referrer route): toggle login/register. Register: name + mobile + password → auto-generated code (e.g. KYRVK) → auto-login. Login: code + password. Dashboard: referrer code with copy-invite-link, stats cards, leads list with status badges + dates, logout.
+- Public site refactor: converted / from client to Server Component that SSR-fetches published FAQs + articles, passes to HomeClient. Added ArticlesSection on homepage. Removed old referrer-panel dialog (replaced by /referrer route). Updated site-header & site-footer: "پنل معرف" now links to /referrer (was dialog).
+- SEO: (1) FAQPage JSON-LD on homepage with all DB FAQs. (2) Article pages /articles/[slug] as Server Components with generateMetadata (title/description/keywords/canonical/OpenGraph twitter-article), Article JSON-LD, generateStaticParams. (3) Organization + WebSite JSON-LD globally in layout. (4) metadataBase + robots config. (5) Dynamic sitemap.ts (/ + all published articles). (6) Dynamic robots.ts (allows /, disallows /admin and /api/, declares sitemap). Removed static public/robots.txt. (7) Markdown renderer for article content with styled headings/lists/paragraphs.
+- Deployment: created .env.example (DATABASE_URL, SESSION_SECRET, SITE_URL, NODE_ENV) and DEPLOYMENT.md (full Persian guide: prerequisites, env setup, db push + seed, build/start, Nginx reverse proxy config, PM2, backup, PostgreSQL upgrade path, security notes).
+
+Verification (Agent Browser end-to-end):
+- Public page: 6 FAQs + 1 article rendered server-side; JSON-LD types present = ["Organization","WebSite","FAQPage"].
+- Article page /articles/[slug]: title, meta description, og:type=article, og:url, og:site_name all correct; Article JSON-LD present; markdown content rendered.
+- robots.txt: allows /, disallows /admin + /api/, declares sitemap. sitemap.xml: lists homepage + published articles.
+- Admin /admin: login form → admin/admin12345 → dashboard with 4 tabs. Leads tab: stats + filter chips + table with inline status select (verified options). Articles tab: created & saved test article "مدارک لازم برای ثبت ادعا" (saved as draft; published via DB; appears in public articles section). 
+- Referrer /referrer: login K1024/referrer123 → dashboard shows code K1024, stats (3 total/1 new/1 contacted/1 completed), leads list with badges. Logout → register "محمد کریمی" → auto-generated code KYRVK → auto-login → dashboard with invite link http://localhost:3000/?ref=KYRVK + empty state. Verified new referrer persisted in DB.
+- Lint clean, dev server stable.
+
+Stage Summary:
+- All requested features complete and browser-verified.
+- Routes: / (public SSR), /admin (admin panel), /referrer (referrer register+login+dashboard), /articles/[slug] (SEO article pages), /sitemap.xml, /robots.txt.
+- Credentials: admin → admin/admin12345 (CHANGE in production); demo referrer → K1024/referrer123.
+- New files: src/lib/auth.ts, src/lib/data.ts, src/lib/tracking.ts (existing), src/app/admin/page.tsx, src/app/referrer/page.tsx, src/app/articles/[slug]/page.tsx, src/app/sitemap.ts, src/app/robots.ts, src/components/admin/* (login, dashboard, 4 tabs), src/components/referrer/* (auth, dashboard), src/components/katebkar/{home-client,articles-section,article-header,article-content,markdown}.ts, .env.example, DEPLOYMENT.md.
+- Production-ready for self-hosted Node hosting (VPS/Node host); SQLite file-based DB; see DEPLOYMENT.md for full guide.

@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getSession, AuthError } from "@/lib/auth";
 
 const STATUS_LABELS: Record<string, string> = {
   new: "جدید",
@@ -33,80 +34,75 @@ function formatDate(d: Date): string {
 }
 
 /**
- * Returns leads attributed to a referrer (by referralCode),
- * plus aggregate stats. Requires the referrer code to exist & be active.
+ * Returns the logged-in referrer's leads + aggregate stats.
+ * Authenticated via session cookie (not query param) for security.
  */
-export async function GET(req: NextRequest) {
-  const url = new URL(req.url);
-  const code = (url.searchParams.get("code") ?? "")
-    .trim()
-    .toUpperCase()
-    .slice(0, 32);
+export async function GET() {
+  try {
+    const session = await getSession();
+    if (!session || session.kind !== "referrer" || !session.code) {
+      throw new AuthError("ورود معرف لازم است.", 401);
+    }
+    const code = session.code;
 
-  if (!code) {
-    return NextResponse.json(
-      { ok: false, error: "کد معرف الزامی است." },
-      { status: 422 }
-    );
+    const referrer = await db.referrer.findUnique({
+      where: { code },
+      select: { code: true, displayName: true, active: true },
+    });
+
+    if (!referrer) {
+      throw new AuthError("کد معرف پیدا نشد.", 404);
+    }
+    if (!referrer.active) {
+      throw new AuthError("این کد معرف غیرفعال است.", 403);
+    }
+
+    const leads = await db.lead.findMany({
+      where: { referralCode: code },
+      orderBy: { createdAt: "desc" },
+      select: {
+        trackingCode: true,
+        fullName: true,
+        mobile: true,
+        city: true,
+        requestType: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+
+    const stats = {
+      total: leads.length,
+      new: leads.filter((l) => l.status === "new").length,
+      contacted: leads.filter((l) => l.status === "contacted").length,
+      service: leads.filter((l) => l.status === "service").length,
+      completed: leads.filter((l) => l.status === "completed").length,
+      cancelled: leads.filter((l) => l.status === "cancelled").length,
+    };
+
+    return NextResponse.json({
+      ok: true,
+      referrer: {
+        code: referrer.code,
+        displayName: referrer.displayName,
+      },
+      stats,
+      leads: leads.map((l) => ({
+        trackingCode: l.trackingCode,
+        fullName: l.fullName,
+        mobileMasked: maskMobile(l.mobile),
+        city: l.city,
+        requestTypeLabel: TYPE_LABELS[l.requestType] ?? l.requestType,
+        statusLabel: STATUS_LABELS[l.status] ?? l.status,
+        status: l.status,
+        dateLabel: formatDate(l.createdAt),
+      })),
+    });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ ok: false, error: err.message }, { status: err.status });
+    }
+    console.error("[referrer/leads] error", err);
+    return NextResponse.json({ ok: false, error: "خطای سرور" }, { status: 500 });
   }
-
-  const referrer = await db.referrer.findUnique({
-    where: { code },
-    select: { code: true, displayName: true, active: true },
-  });
-
-  if (!referrer) {
-    return NextResponse.json(
-      { ok: false, error: "کد معرف پیدا نشد." },
-      { status: 404 }
-    );
-  }
-  if (!referrer.active) {
-    return NextResponse.json(
-      { ok: false, error: "این کد معرف غیرفعال است." },
-      { status: 403 }
-    );
-  }
-
-  const leads = await db.lead.findMany({
-    where: { referralCode: code },
-    orderBy: { createdAt: "desc" },
-    select: {
-      trackingCode: true,
-      fullName: true,
-      mobile: true,
-      city: true,
-      requestType: true,
-      status: true,
-      createdAt: true,
-    },
-  });
-
-  const stats = {
-    total: leads.length,
-    new: leads.filter((l) => l.status === "new").length,
-    contacted: leads.filter((l) => l.status === "contacted").length,
-    service: leads.filter((l) => l.status === "service").length,
-    completed: leads.filter((l) => l.status === "completed").length,
-    cancelled: leads.filter((l) => l.status === "cancelled").length,
-  };
-
-  return NextResponse.json({
-    ok: true,
-    referrer: {
-      code: referrer.code,
-      displayName: referrer.displayName,
-    },
-    stats,
-    leads: leads.map((l) => ({
-      trackingCode: l.trackingCode,
-      fullName: l.fullName,
-      mobileMasked: maskMobile(l.mobile),
-      city: l.city,
-      requestTypeLabel: TYPE_LABELS[l.requestType] ?? l.requestType,
-      statusLabel: STATUS_LABELS[l.status] ?? l.status,
-      status: l.status,
-      dateLabel: formatDate(l.createdAt),
-    })),
-  });
 }
