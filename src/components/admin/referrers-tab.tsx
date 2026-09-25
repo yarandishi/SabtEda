@@ -5,7 +5,12 @@ import { Loader2, RefreshCw, Plus, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { adminFetch } from "./admin-fetch";
 import { cn } from "@/lib/utils";
+
+interface ReferrersTabProps {
+  onSessionExpired: () => void;
+}
 
 interface Referrer {
   id: string;
@@ -19,7 +24,7 @@ interface Referrer {
   dateLabel: string;
 }
 
-export function ReferrersTab() {
+export function ReferrersTab({ onSessionExpired }: ReferrersTabProps) {
   const [referrers, setReferrers] = useState<Referrer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -27,7 +32,8 @@ export function ReferrersTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/referrers", { cache: "no-store" });
+      const res = await adminFetch("/api/admin/referrers", onSessionExpired);
+      if (res.status === 401) return;
       const data = await res.json().catch(() => ({}));
       if (data.ok) setReferrers(data.referrers);
     } catch {
@@ -35,7 +41,7 @@ export function ReferrersTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onSessionExpired]);
 
   useEffect(() => {
     load();
@@ -63,6 +69,7 @@ export function ReferrersTab() {
             setShowCreate(false);
             load();
           }}
+          onSessionExpired={onSessionExpired}
         />
       )}
 
@@ -127,7 +134,13 @@ export function ReferrersTab() {
   );
 }
 
-function CreateReferrerForm({ onCreated }: { onCreated: () => void }) {
+function CreateReferrerForm({
+  onCreated,
+  onSessionExpired,
+}: {
+  onCreated: () => void;
+  onSessionExpired: () => void;
+}) {
   const [displayName, setDisplayName] = useState("");
   const [contact, setContact] = useState("");
   const [code, setCode] = useState("");
@@ -140,7 +153,7 @@ function CreateReferrerForm({ onCreated }: { onCreated: () => void }) {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/referrers", {
+      const res = await adminFetch("/api/admin/referrers", onSessionExpired, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ displayName, contact, code: code || undefined, active: true }),

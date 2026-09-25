@@ -138,3 +138,32 @@ Stage Summary:
 - The registration→login UX gap is fully resolved.
 - Two complementary recovery paths: (1) immediate success screen right after registration (primary), (2) mobile-based code recovery for returning users who forgot (secondary).
 - New files: src/app/api/referrer/recover-code/route.ts. Modified: src/components/referrer/referrer-auth.tsx.
+
+---
+Task ID: 5
+Agent: main (Z.ai Code)
+Task: Fix reported issues: (1) leads not showing in admin, (2) admin actions fail with "auth required" despite login, (3) referrers not showing in admin, (4) tracking should show user's name, (5) make tracking code easier to note.
+
+Work Log:
+- Investigated root cause: dev log showed POST /api/admin/login 200 but GET /api/admin/leads 401. Tested with curl: login sets kk_session cookie correctly, and sending the cookie back returns 200 with leads + referrers. So server-side auth works; the 401s were from a transient dev state during earlier development.
+- Verified full data flow end-to-end: submitted a lead via /api/leads → appeared in admin leads list; registered a referrer via /api/referrer/register → appeared in admin referrers list. So problems 1 & 3 were consequences of problem 2 (auth), not data issues.
+- Tracking code made easier: reduced from 6 to 4 unambiguous chars (KK-XXXX, e.g. KK-7K3M instead of KK-7A3F9X). Updated generateTrackingCode() CODE_LEN=4 and normalizeTrackingCode() to accept both 4-char (new) and 6-char (legacy) codes for backward compatibility. Updated placeholder text.
+- Tracking dialog now shows the user's full name: the /api/leads/track response already included fullName; added a User icon + name row (border-t separator, font-semibold text-navy) to the lead summary card above the type/city/date grid.
+- Admin dashboard robustness against 401: created adminFetch() wrapper that calls onUnauthorized callback on 401. Wired onSessionExpired prop from AdminDashboard → all 4 tabs (Leads, Referrers, Articles, FAQs) and their editor sub-forms. On 401, the dashboard sets authed=false → returns to login screen (instead of showing empty data / confusing error toasts). All admin fetch calls now use adminFetch.
+- Auto-refresh for leads: LeadsTab now polls /api/admin/leads every 20s via setInterval, so newly submitted leads appear in the admin panel without manual refresh. Uses a ref for the callback to avoid stale closures.
+
+Verification (Agent Browser end-to-end):
+- New short tracking code: submitted lead → got KK-AYRB (4 chars). Tracked it → dialog shows code + name "سارا آزمایشگر" + timeline. VLM confirmed name + code + timeline all visible.
+- Admin leads: logged in → leads tab shows 6 leads including the new "سارا آزمایشگر / KK-AYRB". 
+- Auto-refresh: submitted "کاربر تازه" via API, waited 22s → admin lead count went 6→7, new lead appeared without manual refresh.
+- Lead status change: changed a lead's status via dropdown → succeeded, no 401 error toast.
+- Referrer in admin: registered "معرف جدید تست" (KXLZ7) via API → switched to referrers tab → 10 referrers, new one visible at top.
+- 401 handling: cleared session cookie → switched tabs → admin auto-redirected to login screen (heading "ورود به پنل مدیریت" + login form shown).
+- Lint clean, dev server stable.
+
+Stage Summary:
+- All 5 reported issues resolved and browser-verified.
+- Tracking codes now 4 chars (KK-XXXX) — easier to note/read over phone. Legacy 6-char codes still trackable.
+- Tracking dialog shows user's name alongside code/type/city/date.
+- Admin dashboard is now robust: auto-refreshes leads every 20s, and gracefully redirects to login on session expiry instead of failing silently.
+- Modified: src/lib/tracking.ts, src/components/katebkar/tracking-dialog.tsx, src/components/admin/{admin-dashboard,admin-fetch(new),leads-tab,referrers-tab,articles-tab,faqs-tab}.tsx.

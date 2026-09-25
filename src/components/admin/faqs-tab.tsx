@@ -6,7 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { adminFetch } from "./admin-fetch";
 import { cn } from "@/lib/utils";
+
+interface FaqsTabProps {
+  onSessionExpired: () => void;
+}
 
 interface Faq {
   id: string;
@@ -26,7 +31,7 @@ interface FaqEditor {
 
 const EMPTY: FaqEditor = { question: "", answer: "", order: 0, published: true };
 
-export function FaqsTab() {
+export function FaqsTab({ onSessionExpired }: FaqsTabProps) {
   const [faqs, setFaqs] = useState<Faq[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<FaqEditor | null>(null);
@@ -34,7 +39,8 @@ export function FaqsTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/faqs", { cache: "no-store" });
+      const res = await adminFetch("/api/admin/faqs", onSessionExpired);
+      if (res.status === 401) return;
       const data = await res.json().catch(() => ({}));
       if (data.ok) setFaqs(data.faqs);
     } catch {
@@ -42,7 +48,7 @@ export function FaqsTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onSessionExpired]);
 
   useEffect(() => {
     load();
@@ -51,7 +57,7 @@ export function FaqsTab() {
   async function deleteFaq(f: Faq) {
     if (!confirm(`حذف پرسش «${f.question}»؟`)) return;
     try {
-      const res = await fetch(`/api/admin/faqs/${f.id}`, { method: "DELETE" });
+      const res = await adminFetch(`/api/admin/faqs/${f.id}`, onSessionExpired, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (data.ok) {
         setFaqs((prev) => prev.filter((x) => x.id !== f.id));
@@ -65,6 +71,7 @@ export function FaqsTab() {
     return (
       <FaqEditorForm
         editor={editing}
+        onSessionExpired={onSessionExpired}
         onCancel={() => setEditing(null)}
         onSaved={() => {
           setEditing(null);
@@ -163,10 +170,12 @@ export function FaqsTab() {
 
 function FaqEditorForm({
   editor,
+  onSessionExpired,
   onCancel,
   onSaved,
 }: {
   editor: FaqEditor;
+  onSessionExpired: () => void;
   onCancel: () => void;
   onSaved: () => void;
 }) {
@@ -183,7 +192,7 @@ function FaqEditorForm({
     setSaving(true);
     try {
       const isEdit = !!form.id;
-      const res = await fetch(isEdit ? `/api/admin/faqs/${form.id}` : "/api/admin/faqs", {
+      const res = await adminFetch(isEdit ? `/api/admin/faqs/${form.id}` : "/api/admin/faqs", onSessionExpired, {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

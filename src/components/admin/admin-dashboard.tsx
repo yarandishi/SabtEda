@@ -28,6 +28,11 @@ export function AdminDashboard({ onLoggedOut }: AdminDashboardProps) {
   const [tab, setTab] = useState<Tab>("leads");
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // If any admin API returns 401, force back to login screen.
+  const handleSessionExpired = () => {
+    onLoggedOut();
+  };
+
   async function logout() {
     setLoggingOut(true);
     try {
@@ -97,10 +102,10 @@ export function AdminDashboard({ onLoggedOut }: AdminDashboardProps) {
         </div>
 
         {/* Tab content */}
-        {tab === "leads" && <LeadsTab />}
-        {tab === "referrers" && <ReferrersTab />}
-        {tab === "articles" && <ArticlesTab />}
-        {tab === "faqs" && <FaqsTab />}
+        {tab === "leads" && <LeadsTab onSessionExpired={handleSessionExpired} />}
+        {tab === "referrers" && <ReferrersTab onSessionExpired={handleSessionExpired} />}
+        {tab === "articles" && <ArticlesTab onSessionExpired={handleSessionExpired} />}
+        {tab === "faqs" && <FaqsTab onSessionExpired={handleSessionExpired} />}
       </div>
     </div>
   );

@@ -6,7 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { adminFetch } from "./admin-fetch";
 import { cn } from "@/lib/utils";
+
+interface ArticlesTabProps {
+  onSessionExpired: () => void;
+}
 
 interface Article {
   id: string;
@@ -41,7 +46,7 @@ const EMPTY_EDITOR: ArticleEditor = {
   published: false,
 };
 
-export function ArticlesTab() {
+export function ArticlesTab({ onSessionExpired }: ArticlesTabProps) {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ArticleEditor | null>(null);
@@ -49,7 +54,8 @@ export function ArticlesTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/articles", { cache: "no-store" });
+      const res = await adminFetch("/api/admin/articles", onSessionExpired);
+      if (res.status === 401) return;
       const data = await res.json().catch(() => ({}));
       if (data.ok) setArticles(data.articles);
     } catch {
@@ -57,7 +63,7 @@ export function ArticlesTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onSessionExpired]);
 
   useEffect(() => {
     load();
@@ -65,7 +71,7 @@ export function ArticlesTab() {
 
   async function loadForEdit(a: Article) {
     try {
-      const res = await fetch(`/api/admin/articles/${a.id}`, { cache: "no-store" });
+      const res = await adminFetch(`/api/admin/articles/${a.id}`, onSessionExpired);
       const data = await res.json().catch(() => ({}));
       if (data.ok && data.article) {
         setEditing({
@@ -88,7 +94,7 @@ export function ArticlesTab() {
   async function deleteArticle(a: Article) {
     if (!confirm(`حذف «${a.title}»؟ این عمل قابل بازگشت نیست.`)) return;
     try {
-      const res = await fetch(`/api/admin/articles/${a.id}`, { method: "DELETE" });
+      const res = await adminFetch(`/api/admin/articles/${a.id}`, onSessionExpired, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (data.ok) {
         setArticles((prev) => prev.filter((x) => x.id !== a.id));
@@ -102,6 +108,7 @@ export function ArticlesTab() {
     return (
       <ArticleEditorForm
         editor={editing}
+        onSessionExpired={onSessionExpired}
         onCancel={() => setEditing(null)}
         onSaved={() => {
           setEditing(null);
@@ -207,10 +214,12 @@ export function ArticlesTab() {
 
 function ArticleEditorForm({
   editor,
+  onSessionExpired,
   onCancel,
   onSaved,
 }: {
   editor: ArticleEditor;
+  onSessionExpired: () => void;
   onCancel: () => void;
   onSaved: () => void;
 }) {
@@ -231,7 +240,7 @@ function ArticleEditorForm({
     setSaving(true);
     try {
       const isEdit = !!form.id;
-      const res = await fetch(isEdit ? `/api/admin/articles/${form.id}` : "/api/admin/articles", {
+      const res = await adminFetch(isEdit ? `/api/admin/articles/${form.id}` : "/api/admin/articles", onSessionExpired, {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

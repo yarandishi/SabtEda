@@ -21,6 +21,7 @@ import {
   Calendar,
   MapPin,
   Tag,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -119,7 +120,7 @@ export function TrackingDialog({
               ref={inputRef}
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="مثلاً: KK-7A3F9X"
+              placeholder="مثلاً: KK-7K3M"
               className="kk-num h-12 text-base tracking-wider"
               dir="ltr"
               inputMode="text"
@@ -174,7 +175,11 @@ export function TrackingDialog({
                     : "در حال پیگیری"}
                 </span>
               </div>
-              <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+              <div className="mt-3 flex items-center gap-1.5 border-t border-border pt-3 text-sm">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="font-semibold text-navy">{result.lead.fullName}</span>
+              </div>
+              <div className="mt-2 grid grid-cols-1 gap-2 text-xs text-muted-foreground sm:grid-cols-3">
                 <span className="inline-flex items-center gap-1.5">
                   <Tag className="h-3.5 w-3.5" />
                   {result.lead.requestTypeLabel}

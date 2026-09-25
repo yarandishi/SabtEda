@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Loader2, Search, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { adminFetch } from "./admin-fetch";
 import { cn } from "@/lib/utils";
+
+interface LeadsTabProps {
+  onSessionExpired: () => void;
+}
 
 interface Lead {
   id: string;
@@ -45,7 +50,7 @@ const STATUS_BADGE: Record<string, string> = {
   cancelled: "bg-destructive/10 text-destructive",
 };
 
-export function LeadsTab() {
+export function LeadsTab({ onSessionExpired }: LeadsTabProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +58,8 @@ export function LeadsTab() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [openNote, setOpenNote] = useState<string | null>(null);
+  const onSessionExpiredRef = useRef(onSessionExpired);
+  onSessionExpiredRef.current = onSessionExpired;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,7 +67,11 @@ export function LeadsTab() {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (q.trim()) params.set("q", q.trim());
-      const res = await fetch(`/api/admin/leads?${params.toString()}`, { cache: "no-store" });
+      const res = await adminFetch(
+        `/api/admin/leads?${params.toString()}`,
+        () => onSessionExpiredRef.current()
+      );
+      if (res.status === 401) return;
       const data = await res.json().catch(() => ({}));
       if (data.ok) {
         setLeads(data.leads);
@@ -78,10 +89,18 @@ export function LeadsTab() {
     return () => clearTimeout(t);
   }, [load]);
 
+  // Auto-refresh leads every 20s so newly submitted leads appear.
+  useEffect(() => {
+    const id = setInterval(() => {
+      load();
+    }, 20000);
+    return () => clearInterval(id);
+  }, [load]);
+
   async function updateStatus(id: string, status: string) {
     setUpdatingId(id);
     try {
-      const res = await fetch(`/api/admin/leads/${id}/status`, {
+      const res = await adminFetch(`/api/admin/leads/${id}/status`, onSessionExpired, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -119,7 +138,7 @@ export function LeadsTab() {
   async function saveAdminNote(id: string, note: string) {
     setUpdatingId(id);
     try {
-      const res = await fetch(`/api/admin/leads/${id}/status`, {
+      const res = await adminFetch(`/api/admin/leads/${id}/status`, onSessionExpired, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ adminNote: note }),
