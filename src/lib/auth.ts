@@ -1,10 +1,32 @@
 import "server-only";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
+import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 
 const SESSION_COOKIE = "kk_session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+
+/**
+ * Determines whether the request is served over HTTPS, accounting for
+ * reverse proxies (Caddy/Nginx) that set the X-Forwarded-Proto header.
+ * Used to decide cookie flags: HTTPS needs SameSite=None+Secure so the
+ * session cookie works inside cross-origin preview iframes; plain HTTP
+ * (local dev) uses SameSite=Lax.
+ */
+export function isSecureRequest(req?: NextRequest): boolean {
+  if (req) {
+    const forwardedProto = req.headers.get("x-forwarded-proto");
+    if (forwardedProto) return forwardedProto.toLowerCase().includes("https");
+    try {
+      if (new URL(req.url).protocol === "https:") return true;
+    } catch {
+      /* ignore */
+    }
+  }
+  // Fallback: treat production as secure
+  return process.env.NODE_ENV === "production";
+}
 
 /**
  * Session payload encoded into the signed cookie.
@@ -76,7 +98,10 @@ export async function verifyPassword(
   }
 }
 
-export async function createSession(payload: Omit<SessionPayload, "iat" | "exp">) {
+export async function createSession(
+  payload: Omit<SessionPayload, "iat" | "exp">,
+  options?: { secure?: boolean }
+) {
   const now = Date.now();
   const full: SessionPayload = {
     ...payload,
@@ -84,11 +109,15 @@ export async function createSession(payload: Omit<SessionPayload, "iat" | "exp">
     exp: now + SESSION_MAX_AGE * 1000,
   };
   const token = await sign(full);
+  const secure = options?.secure ?? (process.env.NODE_ENV === "production");
   const store = await cookies();
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    // When served over HTTPS (preview iframe / production), the cookie must be
+    // SameSite=None + Secure so that browsers accept it in cross-origin iframes.
+    // For local HTTP dev, SameSite=Lax is enough and Secure can't be used.
+    sameSite: secure ? "none" : "lax",
+    secure,
     path: "/",
     maxAge: SESSION_MAX_AGE,
   });

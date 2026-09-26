@@ -167,3 +167,23 @@ Stage Summary:
 - Tracking dialog shows user's name alongside code/type/city/date.
 - Admin dashboard is now robust: auto-refreshes leads every 20s, and gracefully redirects to login on session expiry instead of failing silently.
 - Modified: src/lib/tracking.ts, src/components/katebkar/tracking-dialog.tsx, src/components/admin/{admin-dashboard,admin-fetch(new),leads-tab,referrers-tab,articles-tab,faqs-tab}.tsx.
+
+---
+Task ID: 6
+Agent: main (Z.ai Code)
+Task: Fix the "login immediately logs out" issue in admin & referrer panels when accessed via the web preview, and provide local-run instructions.
+
+Work Log:
+- Root cause: The session cookie was set with `SameSite=lax` + `secure: (NODE_ENV === 'production')`. The web preview renders the site inside a cross-origin iframe; modern browsers block SameSite=Lax cookies in third-party iframe contexts. So login succeeded (cookie set), but the next /api/admin/me call didn't send the cookie → 401 → the dashboard's new 401-handler called onSessionExpired → back to login. In local dev (direct localhost:3000) it worked because the cookie is first-party.
+- Fix in src/lib/auth.ts: added isSecureRequest(req) helper that reads the X-Forwarded-Proto header (set by Caddy gateway) to detect HTTPS. createSession now accepts { secure } option and sets:
+  - HTTPS (preview/production): SameSite=None + Secure=true → accepted in cross-origin iframe
+  - HTTP (local dev): SameSite=Lax + Secure=false → works on localhost
+- Updated all 3 callers to pass { secure: isSecureRequest(req) }: /api/admin/login, /api/referrer/login, /api/referrer/register.
+- Verified with curl: with X-Forwarded-Proto: https → Set-Cookie includes "Secure; HttpOnly; SameSite=none"; without header (local HTTP) → "HttpOnly; SameSite=lax" (no Secure). Caddyfile confirmed to forward "X-Forwarded-Proto {scheme}".
+- Agent Browser verification on localhost: admin login → stayed logged in, leads loaded (8), switched to referrers tab → still logged in (12 referrers). Referrer login K1024/referrer123 → stayed logged in, code K1024 shown. No auto-logout.
+- Created RUN_LOCALLY.md: comprehensive Persian guide for running the project on the user's own machine — prerequisites (Node/Bun/Git), step-by-step setup (install, .env, db:push, seed, dev), default credentials, how to test each feature, troubleshooting, and pointer to DEPLOYMENT.md for production.
+
+Stage Summary:
+- Cookie/auth issue fully resolved: login now persists in the web preview (HTTPS iframe) AND in local dev (HTTP localhost).
+- User can either continue using the preview (now fixed) or run locally following RUN_LOCALLY.md.
+- Modified: src/lib/auth.ts (isSecureRequest + createSession options), src/app/api/{admin/login,referrer/login,referrer/register}/route.ts. New: RUN_LOCALLY.md.

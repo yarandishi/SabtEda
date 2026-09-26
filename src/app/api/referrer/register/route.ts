@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { createSession, hashPassword, generateUniqueReferrerCode } from "@/lib/auth";
+import { createSession, hashPassword, generateUniqueReferrerCode, isSecureRequest } from "@/lib/auth";
 
 function normalizeMobile(raw: string): string | null {
   const digits = raw.replace(/[^\d+]/g, "");
@@ -66,11 +66,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    await createSession({
-      kind: "referrer",
-      id: referrer.id,
-      code: referrer.code,
-    });
+    await createSession(
+      {
+        kind: "referrer",
+        id: referrer.id,
+        code: referrer.code,
+      },
+      { secure: isSecureRequest(req) }
+    );
 
     return NextResponse.json({
       ok: true,

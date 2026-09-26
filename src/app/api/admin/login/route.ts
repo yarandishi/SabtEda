@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { createSession, verifyPassword } from "@/lib/auth";
+import { createSession, verifyPassword, isSecureRequest } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,11 +33,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await createSession({
-      kind: "admin",
-      id: admin.id,
-      username: admin.username,
-    });
+    await createSession(
+      {
+        kind: "admin",
+        id: admin.id,
+        username: admin.username,
+      },
+      { secure: isSecureRequest(req) }
+    );
 
     return NextResponse.json({
       ok: true,
