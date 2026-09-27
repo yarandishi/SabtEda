@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/katebkar/logo";
+import { CaptchaField } from "@/components/shared/captcha-field";
 
 interface ReferrerAuthProps {
   onLoggedIn: () => void;
@@ -104,6 +105,8 @@ function LoginForm({
 }) {
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
+  const [captcha, setCaptcha] = useState("");
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showRecover, setShowRecover] = useState(false);
@@ -112,15 +115,17 @@ function LoginForm({
     e.preventDefault();
     if (loading) return;
     setError(null);
+    setCaptchaError(null);
     setLoading(true);
     try {
       const res = await fetch("/api/referrer/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: code.trim(), password }),
+        body: JSON.stringify({ code: code.trim(), password, captcha }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
+        if (data?.field === "captcha") setCaptchaError(data.error);
         throw new Error(data?.error || "ورود ناموفق بود.");
       }
       onLoggedIn();
@@ -183,9 +188,11 @@ function LoginForm({
           <p className="rounded-xl bg-destructive/5 px-3 py-2.5 text-xs text-destructive">{error}</p>
         )}
 
+        <CaptchaField value={captcha} onChange={setCaptcha} error={captchaError} />
+
         <Button
           type="submit"
-          disabled={loading || !code || !password}
+          disabled={loading || !code || !password || !captcha}
           className="h-12 w-full bg-forest font-semibold hover:bg-forest/90"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "ورود"}
@@ -369,6 +376,8 @@ function RegisterForm({
   const [displayName, setDisplayName] = useState("");
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
+  const [captcha, setCaptcha] = useState("");
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<RegisterResult | null>(null);
@@ -378,15 +387,17 @@ function RegisterForm({
     e.preventDefault();
     if (loading) return;
     setError(null);
+    setCaptchaError(null);
     setLoading(true);
     try {
       const res = await fetch("/api/referrer/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ displayName, mobile, password }),
+        body: JSON.stringify({ displayName, mobile, password, captcha }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
+        if (data?.field === "captcha") setCaptchaError(data.error);
         throw new Error(data?.error || "ثبت‌نام ناموفق بود.");
       }
       setSuccess({
@@ -518,9 +529,11 @@ function RegisterForm({
           <p className="rounded-xl bg-destructive/5 px-3 py-2.5 text-xs text-destructive">{error}</p>
         )}
 
+        <CaptchaField value={captcha} onChange={setCaptcha} error={captchaError} />
+
         <Button
           type="submit"
-          disabled={loading || displayName.length < 3 || !mobile || password.length < 6}
+          disabled={loading || displayName.length < 3 || !mobile || password.length < 6 || !captcha}
           className="h-12 w-full bg-forest font-semibold hover:bg-forest/90"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "ثبت‌نام"}

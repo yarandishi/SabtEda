@@ -29,6 +29,8 @@ model Referrer {
   displayName  String?
   contact      String?  // mobile
   email        String?
+  // Iranian bank account IBAN (شماره شبا), e.g. IR062960000000100324200001
+  iban         String?
   passwordHash String?  // set when self-registered; null for admin-created (legacy)
   active       Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -90,4 +92,21 @@ model Faq {
   updatedAt DateTime @updatedAt
 
   @@index([published, order])
+}
+
+// ===== Messages between referrer and admin =====
+// Used for the in-app chat: referrers ask questions, admin replies.
+// History is preserved for commission/payment notifications.
+model Message {
+  id         String   @id @default(cuid())
+  // The referrer this conversation belongs to (by code)
+  referrerCode String
+  // "referrer" = sent by referrer; "admin" = sent by admin
+  senderType String
+  body       String
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  @@index([referrerCode, createdAt])
+  @@index([senderType, readAt])
 }

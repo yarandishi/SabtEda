@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createSession, verifyPassword, isSecureRequest } from "@/lib/auth";
+import { consumeCaptcha } from "@/lib/captcha";
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,10 +11,18 @@ export async function POST(req: NextRequest) {
     }
     const code = String(body.code ?? "").trim().toUpperCase();
     const password = String(body.password ?? "");
+    const captcha = String(body.captcha ?? "").trim();
 
     if (!code || !password) {
       return NextResponse.json(
         { ok: false, error: "کد معرف و رمز عبور را وارد کنید." },
+        { status: 422 }
+      );
+    }
+    const captchaOk = await consumeCaptcha(captcha);
+    if (!captchaOk) {
+      return NextResponse.json(
+        { ok: false, field: "captcha", error: "پاسخ کپچا نادرست است." },
         { status: 422 }
       );
     }

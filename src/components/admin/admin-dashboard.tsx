@@ -3,22 +3,24 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/katebkar/logo";
-import { LogOut, FileText, Users, HelpCircle, ClipboardList, ExternalLink } from "lucide-react";
+import { LogOut, FileText, Users, HelpCircle, ClipboardList, ExternalLink, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LeadsTab } from "./leads-tab";
 import { ReferrersTab } from "./referrers-tab";
 import { ArticlesTab } from "./articles-tab";
 import { FaqsTab } from "./faqs-tab";
+import { MessagesTab } from "./messages-tab";
 
 interface AdminDashboardProps {
   onLoggedOut: () => void;
 }
 
-type Tab = "leads" | "referrers" | "articles" | "faqs";
+type Tab = "leads" | "referrers" | "articles" | "faqs" | "messages";
 
 const TABS: { value: Tab; label: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }> }[] = [
   { value: "leads", label: "ثبت‌نام‌ها", icon: ClipboardList },
   { value: "referrers", label: "معرف‌ها", icon: Users },
+  { value: "messages", label: "پیام‌ها", icon: MessageSquare },
   { value: "articles", label: "مقالات", icon: FileText },
   { value: "faqs", label: "پرسش‌ها", icon: HelpCircle },
 ];
@@ -27,11 +29,17 @@ export function AdminDashboard({ onLoggedOut }: AdminDashboardProps) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("leads");
   const [loggingOut, setLoggingOut] = useState(false);
+  const [messageReferrerCode, setMessageReferrerCode] = useState<string | null>(null);
 
   // If any admin API returns 401, force back to login screen.
   const handleSessionExpired = () => {
     onLoggedOut();
   };
+
+  function openMessageFor(code: string) {
+    setMessageReferrerCode(code);
+    setTab("messages");
+  }
 
   async function logout() {
     setLoggingOut(true);
@@ -103,7 +111,18 @@ export function AdminDashboard({ onLoggedOut }: AdminDashboardProps) {
 
         {/* Tab content */}
         {tab === "leads" && <LeadsTab onSessionExpired={handleSessionExpired} />}
-        {tab === "referrers" && <ReferrersTab onSessionExpired={handleSessionExpired} />}
+        {tab === "referrers" && (
+          <ReferrersTab
+            onSessionExpired={handleSessionExpired}
+            onMessageReferrer={openMessageFor}
+          />
+        )}
+        {tab === "messages" && (
+          <MessagesTab
+            onSessionExpired={handleSessionExpired}
+            initialReferrerCode={messageReferrerCode}
+          />
+        )}
         {tab === "articles" && <ArticlesTab onSessionExpired={handleSessionExpired} />}
         {tab === "faqs" && <FaqsTab onSessionExpired={handleSessionExpired} />}
       </div>

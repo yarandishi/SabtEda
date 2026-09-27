@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createSession, hashPassword, generateUniqueReferrerCode, isSecureRequest } from "@/lib/auth";
+import { consumeCaptcha } from "@/lib/captcha";
 
 function normalizeMobile(raw: string): string | null {
   const digits = raw.replace(/[^\d+]/g, "");
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest) {
     const displayName = String(body.displayName ?? "").trim();
     const mobileRaw = String(body.mobile ?? "").trim();
     const password = String(body.password ?? "");
+    const captcha = String(body.captcha ?? "").trim();
 
     if (displayName.length < 3) {
       return NextResponse.json(
@@ -37,6 +39,13 @@ export async function POST(req: NextRequest) {
     if (password.length < 6) {
       return NextResponse.json(
         { ok: false, field: "password", error: "رمز عبور حداقل ۶ کاراکتر باشد." },
+        { status: 422 }
+      );
+    }
+    const captchaOk = await consumeCaptcha(captcha);
+    if (!captchaOk) {
+      return NextResponse.json(
+        { ok: false, field: "captcha", error: "پاسخ کپچا نادرست است." },
         { status: 422 }
       );
     }

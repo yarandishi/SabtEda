@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Loader2, RefreshCw, Plus, UserPlus } from "lucide-react";
+import { Loader2, RefreshCw, Plus, UserPlus, Trash2, QrCode, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { adminFetch } from "./admin-fetch";
+import { QrInvite } from "@/components/shared/qr-invite";
 import { cn } from "@/lib/utils";
 
 interface ReferrersTabProps {
   onSessionExpired: () => void;
+  onMessageReferrer: (code: string) => void;
 }
 
 interface Referrer {
@@ -18,16 +20,18 @@ interface Referrer {
   displayName: string | null;
   contact: string | null;
   email: string | null;
+  iban: string | null;
   active: boolean;
   hasPassword: boolean;
   leadsCount: number;
   dateLabel: string;
 }
 
-export function ReferrersTab({ onSessionExpired }: ReferrersTabProps) {
+export function ReferrersTab({ onSessionExpired, onMessageReferrer }: ReferrersTabProps) {
   const [referrers, setReferrers] = useState<Referrer[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [qrFor, setQrFor] = useState<Referrer | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,6 +50,22 @@ export function ReferrersTab({ onSessionExpired }: ReferrersTabProps) {
   useEffect(() => {
     load();
   }, [load]);
+
+  async function deleteReferrer(id: string, name: string | null, code: string) {
+    const label = name || code;
+    if (!confirm(`حذف معرف «${label}»؟ ثبت‌نام‌های مرتبط حفظ می‌شوند ولی حساب معرف حذف می‌شود.`)) return;
+    try {
+      const res = await adminFetch(`/api/admin/referrers/${id}`, onSessionExpired, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.ok) {
+        setReferrers((prev) => prev.filter((r) => r.id !== id));
+      }
+    } catch {
+      /* ignore */
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -89,10 +109,11 @@ export function ReferrersTab({ onSessionExpired }: ReferrersTabProps) {
                 <th className="px-4 py-3 font-medium">کد</th>
                 <th className="px-4 py-3 font-medium">نام</th>
                 <th className="px-4 py-3 font-medium">موبایل</th>
+                <th className="px-4 py-3 font-medium">شماره شبا</th>
                 <th className="px-4 py-3 font-medium">تعداد کارها</th>
                 <th className="px-4 py-3 font-medium">وضعیت</th>
-                <th className="px-4 py-3 font-medium">رمز</th>
                 <th className="px-4 py-3 font-medium">تاریخ عضویت</th>
+                <th className="px-4 py-3 font-medium">عملیات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -104,6 +125,19 @@ export function ReferrersTab({ onSessionExpired }: ReferrersTabProps) {
                   <td className="px-4 py-3 font-medium">{r.displayName ?? "—"}</td>
                   <td className="px-4 py-3">
                     <span className="kk-num text-xs" dir="ltr">{r.contact ?? "—"}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {r.iban ? (
+                      <span
+                        className="kk-num inline-block max-w-[160px] truncate rounded bg-forest-soft px-2 py-0.5 text-[11px] text-forest"
+                        dir="ltr"
+                        title={r.iban}
+                      >
+                        {r.iban}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/50">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className="kk-num inline-flex items-center justify-center rounded-full bg-navy-soft px-2.5 py-0.5 text-xs font-bold text-navy">
@@ -120,14 +154,75 @@ export function ReferrersTab({ onSessionExpired }: ReferrersTabProps) {
                       {r.active ? "فعال" : "غیرفعال"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {r.hasPassword ? "دارد" : "—"}
-                  </td>
                   <td className="px-4 py-3 text-[11px] text-muted-foreground">{r.dateLabel}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => onMessageReferrer(r.code)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-forest/30 text-forest transition-colors hover:bg-forest-soft"
+                        aria-label="پیام به معرف"
+                        title="پیام به معرف"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQrFor(r)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-navy transition-colors hover:bg-mist"
+                        aria-label="QR لینک معرف"
+                        title="QR لینک معرف"
+                      >
+                        <QrCode className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteReferrer(r.id, r.displayName, r.code)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-destructive/30 text-destructive transition-colors hover:bg-destructive/5"
+                        aria-label="حذف معرف"
+                        title="حذف معرف"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* QR modal */}
+      {qrFor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setQrFor(null)}
+        >
+          <div
+            className="w-full max-w-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm font-bold text-white">
+                QR معرف {qrFor.code}
+              </p>
+              <button
+                type="button"
+                onClick={() => setQrFor(null)}
+                className="rounded-lg bg-white/10 px-3 py-1 text-xs text-white hover:bg-white/20"
+              >
+                بستن
+              </button>
+            </div>
+            <QrInvite
+              url={
+                typeof window !== "undefined"
+                  ? `${window.location.origin}/?ref=${qrFor.code}`
+                  : `/?ref=${qrFor.code}`
+              }
+            />
+          </div>
         </div>
       )}
     </div>

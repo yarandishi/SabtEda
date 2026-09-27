@@ -187,3 +187,33 @@ Stage Summary:
 - Cookie/auth issue fully resolved: login now persists in the web preview (HTTPS iframe) AND in local dev (HTTP localhost).
 - User can either continue using the preview (now fixed) or run locally following RUN_LOCALLY.md.
 - Modified: src/lib/auth.ts (isSecureRequest + createSession options), src/app/api/{admin/login,referrer/login,referrer/register}/route.ts. New: RUN_LOCALLY.md.
+
+---
+Task ID: 7
+Agent: main (Z.ai Code)
+Task: Six feature requests: (1) captcha on login forms, (2) delete leads/referrers in admin, (3) numeric tracking code, (5) QR code print for referrer links, (6) referrer↔admin messaging with history, (7) admin stats API with token for MacroDroid.
+
+Work Log:
+- Schema: added Message model (referrerCode, senderType, body, readAt, createdAt) with indexes. db:push. Added SESSION_SECRET and ADMIN_API_TOKEN to .env.
+- Captcha (feature 1): src/lib/captcha.ts — stateless math captcha (Persian-digit questions like "۳ + ۷ = ؟"). issueCaptcha() generates a challenge, signs it (HMAC-SHA256), stores in httpOnly cookie kk_captcha (SameSite=None+Secure on HTTPS). consumeCaptcha() verifies with Persian↔Latin digit normalization and is single-use. GET /api/captcha returns the question. Wired captcha verification into /api/admin/login, /api/referrer/login, /api/referrer/register. CaptchaField component (question badge + input + refresh button) added to admin-login and referrer-auth (both login & register forms).
+- Delete (feature 2): DELETE /api/admin/leads/[id] and DELETE /api/admin/referrers/[id]. Added deleteLead()/deleteReferrer() with confirm() in leads-tab and referrers-tab UIs. Trash buttons in desktop table + mobile cards.
+- Numeric tracking code (feature 3): generateTrackingCode now produces "KK-1234" (4 digits, 1000-9999). normalizeTrackingCode accepts 4-digit numeric (new) + legacy 4/6-char alphanumeric.
+- QR code (feature 5): installed qrcode + @types/qrcode. QrInvite component generates a navy QR data URL, with copy-link and print (opens a styled print window). Added compact QR to referrer dashboard (next to invite link) and a QR button per referrer in admin referrers tab (opens QR modal).
+- Messaging (feature 6): Message model. APIs: GET/POST /api/referrer/messages (referrer reads/sends), GET /api/admin/messages (conversation list with unread counts), GET/POST /api/admin/messages/[referrerCode] (admin reads thread + replies). Auto-marks messages as read when the other party opens the thread. MessagesTab in admin (conversation list + chat thread, auto-refresh 15s/10s). ReferrerMessages box in referrer dashboard (chat UI, auto-refresh 12s). Added "پیام‌ها" tab to admin dashboard.
+- Stats API (feature 7): GET /api/admin/stats with Bearer token auth (ADMIN_API_TOKEN env). Returns newLeadsToday, newThisWeek, totalLeads, byStatus, unreadMessages, totalReferrers. Created API_DOCS.md with full MacroDroid setup instructions (trigger, HTTP request action, variable extraction, notification scenarios).
+- Refactored: extracted isSecureRequest to src/lib/http.ts (shared by auth.ts and captcha.ts) to avoid duplication. Fixed captcha.ts require() lint errors by switching to static `import crypto from "node:crypto"`.
+
+Verification (curl + Agent Browser):
+- Captcha: GET /api/captcha → "۷ − ۴ = ؟". Login without captcha → 422 "پاسخ کپچا نادرست است." Admin login in browser with captcha answer → LOGGED IN. Referrer login via curl with solved captcha → ok.
+- Numeric code: new lead → "KK-8144" (4 digits). 
+- Delete: created lead, deleted via API → {"ok":true}, confirmed gone (0 matches).
+- QR: 13 QR buttons + 13 delete buttons in admin referrers tab. QR modal opens with image. VLM confirmed QR image + code + print/copy buttons visible.
+- Messaging: referrer sent "سلام، وضعیت سود..." → admin MessagesTab showed conversation with unread badge "1" → admin replied "سود این ماه هفته آینده..." → referrer API confirmed receipt (senderType: admin).
+- Stats API: without token → 401; with token → full JSON (newLeadsToday, totalLeads, byStatus, unreadMessages, totalReferrers).
+- Lint clean, dev server stable.
+
+Stage Summary:
+- All 6 requested features complete and verified.
+- New files: src/lib/captcha.ts, src/lib/http.ts, src/components/shared/{captcha-field,qr-invite}.tsx, src/components/admin/messages-tab.tsx, src/components/referrer/referrer-messages.tsx, src/app/api/{captcha,admin/leads/[id],admin/referrers/[id],admin/messages,admin/messages/[referrerCode],admin/stats,referrer/messages}/route.ts, API_DOCS.md.
+- Modified: prisma/schema.prisma, src/lib/{auth,tracking}.ts, .env, .env.example, src/components/{admin/{admin-dashboard,admin-login,leads-tab,referrers-tab},referrer/{referrer-auth,referrer-dashboard}}.tsx, login/register API routes.
+- Credentials: admin → admin/admin12345; demo referrer → K1024/referrer123; ADMIN_API_TOKEN in .env (e78edf27005bcc6dc366a87fd295c1ac for this sandbox).

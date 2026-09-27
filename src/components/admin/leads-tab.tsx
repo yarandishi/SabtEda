@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Loader2, Search, RefreshCw } from "lucide-react";
+import { Loader2, Search, RefreshCw, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { adminFetch } from "./admin-fetch";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ interface Lead {
   fullName: string;
   mobile: string;
   city: string;
+  requestType: string;
   requestTypeLabel: string;
   status: string;
   statusLabel: string;
@@ -155,6 +156,21 @@ export function LeadsTab({ onSessionExpired }: LeadsTabProps) {
     }
   }
 
+  async function deleteLead(id: string, name: string) {
+    if (!confirm(`حذف ثبت‌نام «${name}»؟ این عمل قابل بازگشت نیست.`)) return;
+    try {
+      const res = await adminFetch(`/api/admin/leads/${id}`, onSessionExpired, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.ok) {
+        setLeads((prev) => prev.filter((l) => l.id !== id));
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Stats */}
@@ -228,6 +244,7 @@ export function LeadsTab({ onSessionExpired }: LeadsTabProps) {
                   <th className="px-4 py-3 font-medium">تاریخ</th>
                   <th className="px-4 py-3 font-medium">وضعیت</th>
                   <th className="px-4 py-3 font-medium">یادداشت</th>
+                  <th className="px-4 py-3 font-medium">عملیات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -241,7 +258,18 @@ export function LeadsTab({ onSessionExpired }: LeadsTabProps) {
                       <span className="kk-num text-xs" dir="ltr">{l.mobile}</span>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{l.city}</td>
-                    <td className="px-4 py-3 text-xs">{l.requestTypeLabel}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={cn(
+                          "rounded-full px-2.5 py-1 text-[11px] font-bold",
+                          l.requestType === "assistance"
+                            ? "bg-amber-cta text-white ring-2 ring-amber-cta/30"
+                            : "bg-mist text-muted-foreground"
+                        )}
+                      >
+                        {l.requestTypeLabel}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       {l.referralCode ? (
                         <span className="kk-num rounded bg-mist px-1.5 py-0.5 text-[11px] text-navy">
@@ -279,6 +307,17 @@ export function LeadsTab({ onSessionExpired }: LeadsTabProps) {
                         saving={updatingId === l.id}
                       />
                     </td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => deleteLead(l.id, l.fullName)}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-destructive/30 text-destructive transition-colors hover:bg-destructive/5"
+                        aria-label="حذف"
+                        title="حذف ثبت‌نام"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -301,7 +340,19 @@ export function LeadsTab({ onSessionExpired }: LeadsTabProps) {
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
                   <span>کد: <span className="kk-num font-semibold text-navy">{l.trackingCode}</span></span>
                   <span>شهر: {l.city}</span>
-                  <span>نوع: {l.requestTypeLabel}</span>
+                  <span>
+                    نوع:{" "}
+                    <span
+                      className={cn(
+                        "rounded px-1.5 py-0.5 font-bold",
+                        l.requestType === "assistance"
+                          ? "bg-amber-cta text-white"
+                          : "bg-mist text-muted-foreground"
+                      )}
+                    >
+                      {l.requestTypeLabel}
+                    </span>
+                  </span>
                   <span>معرف: {l.referralCode ?? "—"}</span>
                 </div>
                 <p className="mt-2 text-[11px] text-muted-foreground">{l.dateLabel}</p>
@@ -324,6 +375,14 @@ export function LeadsTab({ onSessionExpired }: LeadsTabProps) {
                     className="rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground"
                   >
                     یادداشت
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteLead(l.id, l.fullName)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-destructive/30 text-destructive"
+                    aria-label="حذف"
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
                 {openNote === l.id && (

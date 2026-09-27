@@ -39,6 +39,7 @@ export async function GET() {
         displayName: r.displayName,
         contact: r.contact,
         email: r.email,
+        iban: r.iban,
         active: r.active,
         hasPassword: !!r.passwordHash,
         leadsCount: countMap.get(r.code) ?? 0,

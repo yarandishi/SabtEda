@@ -1,32 +1,13 @@
 import "server-only";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
-import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
+import { isSecureRequest } from "@/lib/http";
+
+export { isSecureRequest };
 
 const SESSION_COOKIE = "kk_session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
-
-/**
- * Determines whether the request is served over HTTPS, accounting for
- * reverse proxies (Caddy/Nginx) that set the X-Forwarded-Proto header.
- * Used to decide cookie flags: HTTPS needs SameSite=None+Secure so the
- * session cookie works inside cross-origin preview iframes; plain HTTP
- * (local dev) uses SameSite=Lax.
- */
-export function isSecureRequest(req?: NextRequest): boolean {
-  if (req) {
-    const forwardedProto = req.headers.get("x-forwarded-proto");
-    if (forwardedProto) return forwardedProto.toLowerCase().includes("https");
-    try {
-      if (new URL(req.url).protocol === "https:") return true;
-    } catch {
-      /* ignore */
-    }
-  }
-  // Fallback: treat production as secure
-  return process.env.NODE_ENV === "production";
-}
 
 /**
  * Session payload encoded into the signed cookie.

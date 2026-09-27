@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut, ExternalLink, Copy, Check, RefreshCw, Loader2 } from "lucide-react";
 import { Logo } from "@/components/katebkar/logo";
+import { QrInvite } from "@/components/shared/qr-invite";
+import { ReferrerMessages } from "./referrer-messages";
+import { ReferrerProfile } from "./referrer-profile";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -138,11 +141,11 @@ export function ReferrerDashboard({ onLoggedOut }: ReferrerDashboardProps) {
       </header>
 
       <div className="mx-auto w-full max-w-[1000px] px-4 py-6 sm:px-6">
-        {/* Welcome + invite link */}
+        {/* Welcome + invite link + QR */}
         {referrer && (
           <div className="mb-5 rounded-2xl border border-forest/20 bg-forest-soft/50 p-5 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex-1">
                 <p className="text-xs text-muted-foreground">کد معرف شما</p>
                 <p className="kk-num font-display text-2xl font-bold tracking-wider text-navy">
                   {referrer.code}
@@ -150,22 +153,30 @@ export function ReferrerDashboard({ onLoggedOut }: ReferrerDashboardProps) {
                 {referrer.displayName && (
                   <p className="mt-0.5 text-sm text-muted-foreground">{referrer.displayName}</p>
                 )}
+                <div className="mt-3 rounded-lg bg-card/60 p-2.5">
+                  <p className="kk-num break-all text-[11px] text-muted-foreground" dir="ltr">
+                    {typeof window !== "undefined"
+                      ? `${window.location.origin}/?ref=${referrer.code}`
+                      : `/?ref=${referrer.code}`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={copyInvite}
+                  className="mt-3 inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-medium text-navy shadow-sm transition-colors hover:bg-mist"
+                >
+                  {copied ? <Check className="h-4 w-4 text-forest" /> : <Copy className="h-4 w-4" />}
+                  کپی لینک دعوت
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={copyInvite}
-                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-xs font-medium text-navy shadow-sm transition-colors hover:bg-mist"
-              >
-                {copied ? <Check className="h-4 w-4 text-forest" /> : <Copy className="h-4 w-4" />}
-                کپی لینک دعوت
-              </button>
-            </div>
-            <div className="mt-3 rounded-lg bg-card/60 p-2.5">
-              <p className="kk-num break-all text-[11px] text-muted-foreground" dir="ltr">
-                {typeof window !== "undefined"
-                  ? `${window.location.origin}/?ref=${referrer.code}`
-                  : `/?ref=${referrer.code}`}
-              </p>
+              <QrInvite
+                url={
+                  typeof window !== "undefined"
+                    ? `${window.location.origin}/?ref=${referrer.code}`
+                    : `/?ref=${referrer.code}`
+                }
+                compact
+              />
             </div>
           </div>
         )}
@@ -234,6 +245,12 @@ export function ReferrerDashboard({ onLoggedOut }: ReferrerDashboardProps) {
             ))}
           </div>
         )}
+
+        {/* Bank profile (IBAN) + messages to admin */}
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          {referrer && <ReferrerProfile referrerCode={referrer.code} />}
+          <ReferrerMessages />
+        </div>
       </div>
     </div>
   );

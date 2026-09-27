@@ -1,38 +1,32 @@
 import { db } from "@/lib/db";
 
-// Characters that are easy to read/say aloud (no 0/O/1/I confusion)
-const ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-// Short, easy-to-note code: 4 chars (e.g. KK-7K3M) — ~1M combinations.
-const CODE_LEN = 4;
-const MAX_ATTEMPTS = 15;
-
 /**
- * Generates a unique human-friendly tracking code like "KK-7K3M".
- * Short enough to easily note down and read over the phone.
- * Retries on (very unlikely) collisions.
+ * Generates a unique human-friendly tracking code like "KK-1234".
+ * Numeric-only for easy noting/reading by general (non-technical) users.
+ * 4 digits = 9000 possible codes (1-9999), retries on collision.
  */
+const MAX_ATTEMPTS = 20;
+
 export async function generateTrackingCode(): Promise<string> {
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    let code = "";
-    for (let i = 0; i < CODE_LEN; i++) {
-      code += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
-    }
-    const full = `KK-${code}`;
+    // 4-digit number, 1000..9999 (avoid leading zeros for clarity)
+    const num = Math.floor(Math.random() * 9000) + 1000;
+    const full = `KK-${num}`;
     const exists = await db.lead.findUnique({
       where: { trackingCode: full },
       select: { id: true },
     });
     if (!exists) return full;
   }
-  // Fallback with timestamp suffix to guarantee uniqueness
-  const suffix = Date.now().toString(36).toUpperCase().slice(-4);
+  // Extremely unlikely fallback
+  const suffix = Date.now().toString().slice(-5);
   return `KK-${suffix}`;
 }
 
 /**
  * Normalizes a user-entered tracking code.
- * Accepts 4-char (new format, e.g. KK-7K3M) and 6-char (legacy, e.g. KK-7A3F9X).
- * Tolerant of missing "KK-" prefix, spaces, and lowercase.
+ * Accepts numeric codes like "KK-1234", "1234", "kk1234".
+ * Also still accepts legacy alphanumeric codes (4 or 6 chars) for backward compatibility.
  */
 export function normalizeTrackingCode(raw: string): string | null {
   const cleaned = raw
@@ -40,8 +34,9 @@ export function normalizeTrackingCode(raw: string): string | null {
     .toUpperCase()
     .replace(/\s+/g, "")
     .replace(/^KK?[-]?/i, "");
-  // Accept 4 OR 6 unambiguous chars (4 = new, 6 = legacy)
-  const m = cleaned.match(/^[A-Z2-9]{4}$|^[A-Z2-9]{6}$/);
-  if (!m) return null;
-  return `KK-${cleaned}`;
+  // New numeric format: 4 digits
+  if (/^\d{4}$/.test(cleaned)) return `KK-${cleaned}`;
+  // Legacy alphanumeric format: 4 or 6 unambiguous chars
+  if (/^[A-Z2-9]{4}$|^[A-Z2-9]{6}$/.test(cleaned)) return `KK-${cleaned}`;
+  return null;
 }

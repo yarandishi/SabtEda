@@ -6,6 +6,7 @@ import { Loader2, Lock, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/katebkar/logo";
+import { CaptchaField } from "@/components/shared/captcha-field";
 
 interface AdminLoginProps {
   onLoggedIn: () => void;
@@ -15,6 +16,8 @@ export function AdminLogin({ onLoggedIn }: AdminLoginProps) {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [captcha, setCaptcha] = useState("");
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,15 +25,19 @@ export function AdminLogin({ onLoggedIn }: AdminLoginProps) {
     e.preventDefault();
     if (loading) return;
     setError(null);
+    setCaptchaError(null);
     setLoading(true);
     try {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ username, password, captcha }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
+        if (data?.field === "captcha") {
+          setCaptchaError(data.error);
+        }
         throw new Error(data?.error || "ورود ناموفق بود.");
       }
       onLoggedIn();
@@ -96,9 +103,11 @@ export function AdminLogin({ onLoggedIn }: AdminLoginProps) {
               </p>
             )}
 
+            <CaptchaField value={captcha} onChange={setCaptcha} error={captchaError} />
+
             <Button
               type="submit"
-              disabled={loading || !username || !password}
+              disabled={loading || !username || !password || !captcha}
               className="h-12 w-full bg-navy font-semibold hover:bg-navy-dark"
             >
               {loading ? (
