@@ -217,3 +217,21 @@ Stage Summary:
 - New files: src/lib/captcha.ts, src/lib/http.ts, src/components/shared/{captcha-field,qr-invite}.tsx, src/components/admin/messages-tab.tsx, src/components/referrer/referrer-messages.tsx, src/app/api/{captcha,admin/leads/[id],admin/referrers/[id],admin/messages,admin/messages/[referrerCode],admin/stats,referrer/messages}/route.ts, API_DOCS.md.
 - Modified: prisma/schema.prisma, src/lib/{auth,tracking}.ts, .env, .env.example, src/components/{admin/{admin-dashboard,admin-login,leads-tab,referrers-tab},referrer/{referrer-auth,referrer-dashboard}}.tsx, login/register API routes.
 - Credentials: admin → admin/admin12345; demo referrer → K1024/referrer123; ADMIN_API_TOKEN in .env (e78edf27005bcc6dc366a87fd295c1ac for this sandbox).
+
+---
+Task ID: 8
+Agent: main (Z.ai Code)
+Task: Verify the analytics module (آمار سایت) is working — visit tracking, admin analytics tab with IP/browser/platform/OS/pages/referers/recent visits.
+
+Work Log:
+- Found that the analytics module was already built (from a previous session): Visit model in schema, src/lib/ua-parser.ts, src/components/shared/visit-tracker.tsx, src/app/api/track/route.ts, src/app/api/admin/analytics/route.ts, src/components/admin/analytics-tab.tsx, wired into admin-dashboard.tsx with "آمار سایت" tab.
+- Diagnosed error: POST /api/track was returning 500 with "Cannot read properties of undefined (reading 'create')" — db.visit was undefined because the Prisma Client was stale (didn't know the Visit model).
+- Fix: ran `bun run db:generate` to regenerate the Prisma Client with the Visit model. Then killed dev server, cleared .next cache, restarted. Verified db.visit now exists.
+- Tested track endpoint: POST /api/track with simulated User-Agents (Chrome/Windows, Safari/iPhone, Firefox/Mac) → all recorded correctly in DB with parsed browser/platform/OS/IP.
+- Verified analytics API: GET /api/admin/analytics returns overview (totalVisits, uniqueVisitors, uniqueIps, visitsToday, botCount), timeSeries (per-day), topPages, topBrowsers, topPlatforms, topOS, topIps, topReferers, recent visits.
+- Browser verification: logged into admin (with captcha) → clicked "آمار سایت" tab → all sections render: overview cards, time-series bar chart, top pages, browser breakdown, platform (desktop/mobile), OS breakdown, top IPs, recent visits table with IP/page/browser/OS/platform/time columns. Range selector (7/14/30 days) works. VLM confirmed visual layout.
+- Lint clean.
+
+Stage Summary:
+- Analytics module fully functional. The only issue was a stale Prisma Client (needed db:generate after schema was updated to include Visit model).
+- Features: automatic visit tracking on every public page load, IP address, User-Agent parsing (browser/platform/OS in Persian), session deduplication (30-min cookie), bot detection, referer tracking, time-series chart, top lists (pages/browsers/platforms/OS/IPs/referers), recent visits table, date range filter (7/14/30/90 days).
