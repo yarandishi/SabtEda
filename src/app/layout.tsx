@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Vazirmatn, El_Messiri } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { VisitTracker } from "@/components/shared/visit-tracker";
 
 const vazirmatn = Vazirmatn({
   variable: "--font-vazirmatn",
@@ -109,6 +110,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
         {children}
+        <VisitTracker />
         <Toaster />
       </body>
     </html>

@@ -3,24 +3,26 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/katebkar/logo";
-import { LogOut, FileText, Users, HelpCircle, ClipboardList, ExternalLink, MessageSquare } from "lucide-react";
+import { LogOut, FileText, Users, HelpCircle, ClipboardList, ExternalLink, MessageSquare, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LeadsTab } from "./leads-tab";
 import { ReferrersTab } from "./referrers-tab";
 import { ArticlesTab } from "./articles-tab";
 import { FaqsTab } from "./faqs-tab";
 import { MessagesTab } from "./messages-tab";
+import { AnalyticsTab } from "./analytics-tab";
 
 interface AdminDashboardProps {
   onLoggedOut: () => void;
 }
 
-type Tab = "leads" | "referrers" | "articles" | "faqs" | "messages";
+type Tab = "leads" | "referrers" | "articles" | "faqs" | "messages" | "analytics";
 
 const TABS: { value: Tab; label: string; icon: React.ComponentType<{ className?: string; strokeWidth?: number }> }[] = [
   { value: "leads", label: "ثبت‌نام‌ها", icon: ClipboardList },
   { value: "referrers", label: "معرف‌ها", icon: Users },
   { value: "messages", label: "پیام‌ها", icon: MessageSquare },
+  { value: "analytics", label: "آمار سایت", icon: BarChart3 },
   { value: "articles", label: "مقالات", icon: FileText },
   { value: "faqs", label: "پرسش‌ها", icon: HelpCircle },
 ];
@@ -125,6 +127,7 @@ export function AdminDashboard({ onLoggedOut }: AdminDashboardProps) {
         )}
         {tab === "articles" && <ArticlesTab onSessionExpired={handleSessionExpired} />}
         {tab === "faqs" && <FaqsTab onSessionExpired={handleSessionExpired} />}
+        {tab === "analytics" && <AnalyticsTab onSessionExpired={handleSessionExpired} />}
       </div>
     </div>
   );

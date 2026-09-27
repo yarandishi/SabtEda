@@ -110,3 +110,28 @@ model Message {
   @@index([referrerCode, createdAt])
   @@index([senderType, readAt])
 }
+
+// ===== Site analytics: page-view visits =====
+model Visit {
+  id        String   @id @default(cuid())
+  ip        String?
+  path      String
+  method    String?
+  // Parsed from User-Agent:
+  browser   String?  // Chrome, Firefox, Safari, Edge, ...
+  platform  String?  // desktop, mobile, tablet
+  os        String?  // Windows, macOS, Linux, Android, iOS, ...
+  // Raw + referer
+  userAgent String?
+  referer   String?
+  // Unique visitor session (30-min cookie)
+  sessionId String?
+  // Whether the visit was a bot/crawler
+  isBot     Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([path])
+  @@index([ip])
+  @@index([sessionId])
+}
